@@ -23,7 +23,7 @@ namespace XenosAdventure
         Texture2D tile;
         Player player;
         PointLight playerLight;
-        KeyboardState oldKeystate;
+        TimeSpan playerMovementTime;
 
         public TileMap(Game game, List<TileType> tileSetup, int tileSize)
             : base(game)
@@ -38,6 +38,9 @@ namespace XenosAdventure
             this.tileSize = tileSize;
 
             spriteBatch = (SpriteBatch)Game.Services.GetService(typeof(SpriteBatch));
+
+            Console.WriteLine("XENOS'S ADVENTURE");
+            
 
             // Calculate tiles based on weights
             int totalWeight = 0;
@@ -67,16 +70,76 @@ namespace XenosAdventure
                     {
                         for (int typeIndex = 0; typeIndex < tileSetup.Count; typeIndex++)
                         {
-                            weightOffset += tileSetup[typeIndex].Weight;
-                            repeatWeightOffset += tileSetup[typeIndex].RepeatWeight;
-                            if (rand < weightOffset)
+                            if (!tileSetup[typeIndex].Flood)
                             {
-                                grid[i, j] = typeIndex;
-                                break;
+                                weightOffset += tileSetup[typeIndex].Weight;
+                                repeatWeightOffset += tileSetup[typeIndex].RepeatWeight;
+                                if (rand < weightOffset)
+                                {
+                                    grid[i, j] = typeIndex;
+                                    break;
+                                }
                             }
                         }
                     }
                 }
+                
+            }
+
+            // Generate floods
+            for (int typeIndex = 0; typeIndex < tileSetup.Count; typeIndex++)
+            {
+                if (tileSetup[typeIndex].Flood)
+                {
+                    FloodGeneration(typeIndex);
+                }
+            }
+        }
+
+        private void FloodGeneration(int typeIndex)
+        {
+            int x = 0, y = random.Next(heightInTiles / 4, 3 * heightInTiles / 4);
+
+            grid[x, y] = typeIndex;
+            while (x < widthInTiles - 1 && y < heightInTiles - 1 && y > 0)
+            {
+                int rand = random.Next(5);
+                // Left
+                if (rand == 0 && x > 0 && grid[x - 1, y] != typeIndex)
+                {
+                    x -= 1;
+                    grid[x, y] = typeIndex;
+                }
+                // Up
+                else if (rand == 1 && y > 0 && grid[x, y - 1] != typeIndex)
+                {
+                    y -= 1;
+                    grid[x, y] = typeIndex;
+                }
+                // Right
+                else if (rand == 2 || rand == 3 && grid[x + 1, y] != typeIndex)
+                {
+                    x += 1;
+                    grid[x, y] = typeIndex;
+                }
+                // Down
+                else if (rand == 4 && grid[x, y + 1] != typeIndex)
+                {
+                    y += 1;
+                    grid[x, y] = typeIndex;
+                }
+                else if ((x == 0 || grid[x - 1, y] == typeIndex) &&
+                    (grid[x, y - 1] == typeIndex) &&
+                    (grid[x + 1, y] == typeIndex) &&
+                    (grid[x, y + 1] == typeIndex))
+                {
+                    x += 1;
+                    y += 1;
+                    grid[x, y] = typeIndex;
+                }
+                //Console.WriteLine(rand + ", " + x + ", " + y);
+                //Console.WriteLine("tile: " + grid[x, y - 1] + ", " + grid[x + 1, y] + ", " + grid[x, y + 1]);
+                
             }
         }
 
@@ -95,24 +158,31 @@ namespace XenosAdventure
         {
             playerLight.Position = player.Position * tileSize + Vector2.One * (tileSize / 2);
 
-            KeyboardState keystate = Keyboard.GetState();
-            if (keystate.IsKeyDown(Keys.Up) && oldKeystate.IsKeyUp(Keys.Up))
+            playerMovementTime += gameTime.ElapsedGameTime;
+            
+            if (playerMovementTime.TotalMilliseconds > 150)
             {
-                player.Move(new Vector2(0, -1));
+                playerMovementTime = TimeSpan.Zero;
+
+                int x = (int)player.Position.X, y = (int)player.Position.Y;
+                KeyboardState keystate = Keyboard.GetState();
+                if (keystate.IsKeyDown(Keys.Up) && y > 0 && tileSetup[grid[x, y - 1]].Movable)
+                {
+                    player.Move(new Vector2(0, -1));
+                }
+                else if (keystate.IsKeyDown(Keys.Down) && y < heightInTiles - 1 && tileSetup[grid[x, y + 1]].Movable)
+                {
+                    player.Move(new Vector2(0, 1));
+                }
+                else if (keystate.IsKeyDown(Keys.Left) && x > 0 && tileSetup[grid[x - 1, y]].Movable)
+                {
+                    player.Move(new Vector2(-1, 0));
+                }
+                else if (keystate.IsKeyDown(Keys.Right) && x < widthInTiles - 1 && tileSetup[grid[x + 1, y]].Movable)
+                {
+                    player.Move(new Vector2(1, 0));
+                }
             }
-            else if (keystate.IsKeyDown(Keys.Down) && oldKeystate.IsKeyUp(Keys.Down))
-            {
-                player.Move(new Vector2(0, 1));
-            }
-            else if (keystate.IsKeyDown(Keys.Left) && oldKeystate.IsKeyUp(Keys.Left))
-            {
-                player.Move(new Vector2(-1, 0));
-            }
-            else if (keystate.IsKeyDown(Keys.Right) && oldKeystate.IsKeyUp(Keys.Right))
-            {
-                player.Move(new Vector2(1, 0));
-            }
-            oldKeystate = keystate;
         }
 
         /// <summary>
@@ -201,7 +271,8 @@ namespace XenosAdventure
 
             foreach (var tile in tiles)
             {
-                if (!tileSetup[grid[(int)tile.X / tileSize, (int)tile.Y / tileSize]].Movable) 
+                TileType type = tileSetup[grid[(int)tile.X / tileSize, (int)tile.Y / tileSize]];
+                if (!type.Movable && !type.Unshaded) 
                     return true;
             }
 
@@ -210,10 +281,10 @@ namespace XenosAdventure
 
         private Color GetShadedColor(Vector2 position, Color color)
         {
-            MouseState mouseState = Mouse.GetState();
-            Vector2 mouseDiff = position - new Vector2(mouseState.X, mouseState.Y);
-
+            // Ambient
             Vector3 shadedColor = color.ToVector3() * 0.03f;
+            
+            // Diffuse
             foreach (PointLight light in lightSources)
             {
                 Vector2 lightDiff = position - light.Position;
@@ -222,10 +293,30 @@ namespace XenosAdventure
                     shadedColor += color.ToVector3() * light.Color.ToVector3() * light.CalculatePower(position);
                 }
             }
-            //shadedColor += new Vector3(.41f, .84f, .81f) * color.ToVector3() * MathHelper.Clamp(1 - (mouseDiff.Length() / 300), 0, 1);
+
+            // Bloom
+            int x = (int)position.X / tileSize, y = (int)position.Y / tileSize;
+            if (x > 0 && tileSetup[grid[x - 1, y]].Unshaded)
+                shadedColor += tileSetup[grid[x - 1, y]].Color.ToVector3() * 0.4f;
+            if (x < widthInTiles - 1 && tileSetup[grid[x + 1, y]].Unshaded)
+                shadedColor += tileSetup[grid[x + 1, y]].Color.ToVector3() * 0.4f;
+            if (y > 0 && tileSetup[grid[x, y - 1]].Unshaded)
+                shadedColor += tileSetup[grid[x, y - 1]].Color.ToVector3() * 0.4f;
+            if (y < heightInTiles - 1 && tileSetup[grid[x, y + 1]].Unshaded)
+                shadedColor += tileSetup[grid[x, y + 1]].Color.ToVector3() * 0.4f;
 
             return new Color(shadedColor.X, shadedColor.Y, shadedColor.Z);
         }
+
+        ///// <summary>
+        ///// Helper for the bloom function
+        ///// </summary>
+        ///// <returns></returns>
+        //private bool IsBright(Color color)
+        //{
+        //    int sum = color.R + color.G + color.B;
+        //    if (sum > 600)
+        //}
 
         public override void Draw(GameTime gameTime)
         {
@@ -235,8 +326,15 @@ namespace XenosAdventure
                 for (int j = 0; j < heightInTiles; j++)
                 {
                     Vector2 position = new Vector2(i * tileSize, j * tileSize);
-                    spriteBatch.Draw(tile, position,
-                        GetShadedColor(position + Vector2.One * (tileSize / 2), tileSetup[grid[i,j]].Color));
+                    if (tileSetup[grid[i, j]].Unshaded)
+                    {
+                        spriteBatch.Draw(tile, position, tileSetup[grid[i, j]].Color);
+                    }
+                    else
+                    {
+                        spriteBatch.Draw(tile, position,
+                            GetShadedColor(position + Vector2.One * (tileSize / 2), tileSetup[grid[i, j]].Color));
+                    }
                 }
             }
 
@@ -252,14 +350,18 @@ namespace XenosAdventure
         public Color Color { get; set; }
         public int Weight { get; set; }
         public int RepeatWeight { get; set; }
-        public Boolean Movable { get; set; }
+        public bool Flood { get; set; }
+        public bool Movable { get; set; }
+        public bool Unshaded { get; set; }
 
         public TileType(Color color, int weight, int repeatWeight)
         {
             Color = color;
             Weight = weight;
             RepeatWeight = repeatWeight;
+            Flood = false;
             Movable = false;
+            Unshaded = false;
         }
     }
 

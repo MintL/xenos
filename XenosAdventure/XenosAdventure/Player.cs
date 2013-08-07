@@ -17,7 +17,7 @@ namespace XenosAdventure
             Position = new Vector2(10, 10);
             //Color = new Color(237, 236, 152);
             Color = Color.Red;
-            LightColor = Color.White;
+            LightColor = Color.Green;
         }
 
 

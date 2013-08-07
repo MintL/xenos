@@ -34,7 +34,7 @@ namespace XenosAdventure
             graphics.PreferredBackBufferHeight = height;
             graphics.ApplyChanges();
 
-            //IsMouseVisible = true;
+            IsMouseVisible = true;
         }
 
         /// <summary>
@@ -48,6 +48,7 @@ namespace XenosAdventure
             spriteBatch = new SpriteBatch(GraphicsDevice);
             Services.AddService(typeof(SpriteBatch), spriteBatch);
 
+            // Floor
             List<TileType> tileSetup = new List<TileType>();
             TileType type = new TileType(new Color(226, 114, 91), 10, 50);
             type.Movable = true;
@@ -56,9 +57,14 @@ namespace XenosAdventure
             type.Movable = true;
             tileSetup.Add(type);
             
+            // Walls
             tileSetup.Add(new TileType(new Color(101, 0, 11), 7, 40));
 
-            tileSetup.Add(new TileType(new Color(230, 32, 32), 3, 30));
+            // Lava
+            type = new TileType(new Color(230, 32, 32), 3, 30);
+            type.Unshaded = true;
+            type.Flood = true;
+            tileSetup.Add(type);
             tileSetup.Add(new TileType(new Color(150, 0, 24), 1, 30));
             
 
