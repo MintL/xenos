@@ -14,10 +14,10 @@ namespace XenosAdventure
 
         public Player()
         {
-            Position = new Vector2(10, 10);
+            Position = new Vector2(0, 0);
             //Color = new Color(237, 236, 152);
             Color = Color.Red;
-            LightColor = Color.Green;
+            LightColor = Color.White;
         }
 
 

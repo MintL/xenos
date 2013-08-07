@@ -10,19 +10,19 @@ namespace XenosAdventure
     {
         public Vector2 Position { get; set; }
         public Color Color { get; set; }
-        public int Range { get; set; }
+        public int Power { get; set; }
 
-        public PointLight(Vector2 position, Color color, int range)
+        public PointLight(Vector2 position, Color color, int power)
         {
             Position = position;
             Color = color;
-            Range = range;
+            Power = power;
         }
 
         public float CalculatePower(Vector2 position)
         {
             Vector2 diff = Position - position;
-            return MathHelper.Clamp(1 / ((float)Math.Pow(diff.Length(), 1.8f)) * Range * 50, 0, 3f);
+            return MathHelper.Clamp(1 / ((float)Math.Pow(diff.Length(), 3f)) * Power, 0, 3f);
         }
 
     }
