@@ -57,110 +57,12 @@ namespace XenosAdventure
             chunk = new Chunk(new Point(-1, 0));
             chunk.Generate(tileSetup, random, chunkSize);
             chunks.Add(chunk);
-
-            //// Calculate tiles based on weights
-            //int totalWeight = 0;
-            //foreach (TileType type in tileSetup)
-            //{
-            //    totalWeight += type.Weight;
-            //}
-
-            //grid = new int[widthInTiles, heightInTiles];
-            //for (int i = 0; i < widthInTiles; i++)
-            //{
-            //    for (int j = 0; j < heightInTiles; j++)
-            //    {
-            //        int rand = random.Next(totalWeight);
-            //        int weightOffset = 0, repeatWeightOffset = 0;
-
-            //        // Repeat
-            //        if (i > 0 && random.Next(100) < tileSetup[grid[i - 1, j]].RepeatWeight)  
-            //        {
-            //            grid[i, j] = grid[i - 1, j];
-            //        }
-            //        else if (j > 0 && random.Next(100) < tileSetup[grid[i, j - 1]].RepeatWeight)
-            //        {
-            //            grid[i, j] = grid[i, j - 1];
-            //        }
-            //        else
-            //        {
-            //            for (int typeIndex = 0; typeIndex < tileSetup.Count; typeIndex++)
-            //            {
-            //                if (!tileSetup[typeIndex].Flood)
-            //                {
-            //                    weightOffset += tileSetup[typeIndex].Weight;
-            //                    repeatWeightOffset += tileSetup[typeIndex].RepeatWeight;
-            //                    if (rand < weightOffset)
-            //                    {
-            //                        grid[i, j] = typeIndex;
-            //                        break;
-            //                    }
-            //                }
-            //            }
-            //        }
-            //    }
-                
-            //}
-
-            //// Generate floods
-            //for (int typeIndex = 0; typeIndex < tileSetup.Count; typeIndex++)
-            //{
-            //    if (tileSetup[typeIndex].Flood)
-            //    {
-            //        FloodGeneration(typeIndex);
-            //    }
-            //}
         }
-
-        //private void FloodGeneration(int typeIndex)
-        //{
-        //    int x = 0, y = random.Next(heightInTiles / 4, 3 * heightInTiles / 4);
-
-        //    grid[x, y] = typeIndex;
-        //    while (x < widthInTiles - 1 && y < heightInTiles - 1 && y > 0)
-        //    {
-        //        int rand = random.Next(5);
-        //        // Left
-        //        if (rand == 0 && x > 0 && grid[x - 1, y] != typeIndex)
-        //        {
-        //            x -= 1;
-        //            grid[x, y] = typeIndex;
-        //        }
-        //        // Up
-        //        else if (rand == 1 && y > 0 && grid[x, y - 1] != typeIndex)
-        //        {
-        //            y -= 1;
-        //            grid[x, y] = typeIndex;
-        //        }
-        //        // Right
-        //        else if (rand == 2 || rand == 3 && grid[x + 1, y] != typeIndex)
-        //        {
-        //            x += 1;
-        //            grid[x, y] = typeIndex;
-        //        }
-        //        // Down
-        //        else if (rand == 4 && grid[x, y + 1] != typeIndex)
-        //        {
-        //            y += 1;
-        //            grid[x, y] = typeIndex;
-        //        }
-        //        else if ((x == 0 || grid[x - 1, y] == typeIndex) &&
-        //            (grid[x, y - 1] == typeIndex) &&
-        //            (grid[x + 1, y] == typeIndex) &&
-        //            (grid[x, y + 1] == typeIndex))
-        //        {
-        //            x += 1;
-        //            y += 1;
-        //            grid[x, y] = typeIndex;
-        //        }
-                
-        //    }
-        //}
 
         protected override void LoadContent()
         {
             tile = Game.Content.Load<Texture2D>("tile");
-            //lightSources.Add(new PointLight(new Vector2(width/2, height/2), new Color(.9f, .5f, .5f), 200));
+            lightSources.Add(new PointLight(new Vector2(16, 16), new Color(.9f, .9f, .9f), 50));
             
             player = new Player();
             playerLight = new PointLight(player.Position, player.LightColor, 50);
@@ -320,15 +222,18 @@ namespace XenosAdventure
             }
 
             // Bloom
-            //int x = (int)position.X / tileSize, y = (int)position.Y / tileSize;
-            //if (x > 0 && tileSetup[grid[x - 1, y]].Unshaded)
-            //    shadedColor += tileSetup[grid[x - 1, y]].Color.ToVector3() * 0.4f;
-            //if (x < widthInTiles - 1 && tileSetup[grid[x + 1, y]].Unshaded)
-            //    shadedColor += tileSetup[grid[x + 1, y]].Color.ToVector3() * 0.4f;
-            //if (y > 0 && tileSetup[grid[x, y - 1]].Unshaded)
-            //    shadedColor += tileSetup[grid[x, y - 1]].Color.ToVector3() * 0.4f;
-            //if (y < heightInTiles - 1 && tileSetup[grid[x, y + 1]].Unshaded)
-            //    shadedColor += tileSetup[grid[x, y + 1]].Color.ToVector3() * 0.4f;
+            Chunk chunk = GetChunk(position);
+            int x = (int)position.X - chunk.ChunkPosition.X * chunkSize;
+            int y = (int)position.Y - chunk.ChunkPosition.Y * chunkSize;
+
+            if (x > 0 && tileSetup[chunk.Grid[x - 1, y]].Unshaded)
+                shadedColor += tileSetup[chunk.Grid[x - 1, y]].Color.ToVector3() * 0.4f;
+            if (x < chunkSize - 1 && tileSetup[chunk.Grid[x + 1, y]].Unshaded)
+                shadedColor += tileSetup[chunk.Grid[x + 1, y]].Color.ToVector3() * 0.4f;
+            if (y > 0 && tileSetup[chunk.Grid[x, y - 1]].Unshaded)
+                shadedColor += tileSetup[chunk.Grid[x, y - 1]].Color.ToVector3() * 0.4f;
+            if (y < chunkSize - 1 && tileSetup[chunk.Grid[x, y + 1]].Unshaded)
+                shadedColor += tileSetup[chunk.Grid[x, y + 1]].Color.ToVector3() * 0.4f;
 
             return new Color(shadedColor.X, shadedColor.Y, shadedColor.Z);
         }

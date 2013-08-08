@@ -10,7 +10,9 @@ namespace XenosAdventure
     {
         public int[,] Grid { get; protected set; }
         public Point ChunkPosition { get; set; }
+
         private int chunkSize;
+        private Random random;
 
         public Chunk(Point position)
         {
@@ -26,6 +28,7 @@ namespace XenosAdventure
         public void Generate(List<TileType> tileSetup, Random random, int chunkSize)
         {
             this.chunkSize = chunkSize;
+            this.random = random;
 
             // Calculate tiles based on weights
             int totalWeight = 0;
@@ -70,6 +73,70 @@ namespace XenosAdventure
                 }
 
             }
+            //// Generate floods
+            for (int typeIndex = 0; typeIndex < tileSetup.Count; typeIndex++)
+            {
+                if (tileSetup[typeIndex].Flood)
+                {
+                    FloodGeneration(typeIndex);
+                }
+            }
+
         }
+
+
+        private void FloodGeneration(int typeIndex)
+        {
+            int x = random.Next(chunkSize / 4, 3 * chunkSize / 4);
+            int y = random.Next(chunkSize / 4, 3 * chunkSize / 4);
+            int oldx = x, oldy = y;
+
+            Grid[x, y] = typeIndex;
+            int length = 0;
+            while (x > 0 && x < chunkSize - 1 && y > 0 && y < chunkSize - 1 && length < 50)
+            {
+                int rand = random.Next(4);
+                // Left
+                if (rand == 0 && x > 0 && Grid[x - 1, y] != typeIndex)
+                {
+                    x -= 1;
+                }
+                // Up
+                else if (rand == 1 && y > 0 && Grid[x, y - 1] != typeIndex)
+                {
+                    y -= 1;
+                }
+                // Right
+                else if (rand == 2 && Grid[x + 1, y] != typeIndex)
+                {
+                    x += 1;
+                }
+                // Down
+                else if (rand == 3 && Grid[x, y + 1] != typeIndex)
+                {
+                    y += 1;
+                }
+                else if ((x == 0 || Grid[x - 1, y] == typeIndex) &&
+                    (Grid[x, y - 1] == typeIndex) &&
+                    (Grid[x + 1, y] == typeIndex) &&
+                    (Grid[x, y + 1] == typeIndex))
+                {
+                    x += 1;
+                    y += 1;
+                }
+
+                if (oldx != x || oldy != y)
+                {
+                    Grid[x, y] = typeIndex;
+                    oldx = x; 
+                    oldy = y;
+                    length++;
+                }
+
+            }
+        }
+
     }
+
+
 }
