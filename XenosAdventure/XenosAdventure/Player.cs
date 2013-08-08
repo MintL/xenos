@@ -8,7 +8,7 @@ namespace XenosAdventure
 {
     class Player
     {
-        public Vector2 Position { get; protected set; }
+        public Vector2 Position { get; set; }
         public Color Color { get; set; }
         public Color LightColor { get; set; }
 
@@ -20,10 +20,5 @@ namespace XenosAdventure
             LightColor = Color.White;
         }
 
-
-        public void Move(Vector2 offset)
-        {
-            Position += offset; 
-        }
     }
 }

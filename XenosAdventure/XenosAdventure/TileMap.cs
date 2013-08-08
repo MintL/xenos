@@ -175,24 +175,30 @@ namespace XenosAdventure
             if (playerMovementTime.TotalMilliseconds > 150)
             {
                 playerMovementTime = TimeSpan.Zero;
-
-                int x = (int)player.Position.X, y = (int)player.Position.Y;
                 KeyboardState keystate = Keyboard.GetState();
+
+                Vector2 translation = Vector2.Zero;
                 if (keystate.IsKeyDown(Keys.Up))// && y > 0 && tileSetup[grid[x, y - 1]].Movable)
                 {
-                    player.Move(new Vector2(0, -1));
+                    translation = new Vector2(0, -1);
                 }
                 else if (keystate.IsKeyDown(Keys.Down))// && y < heightInTiles - 1 && tileSetup[grid[x, y + 1]].Movable)
                 {
-                    player.Move(new Vector2(0, 1));
+                    translation = new Vector2(0, 1);
                 }
                 else if (keystate.IsKeyDown(Keys.Left))// && x > 0 && tileSetup[grid[x - 1, y]].Movable)
                 {
-                    player.Move(new Vector2(-1, 0));
+                    translation = new Vector2(-1, 0);
                 }
                 else if (keystate.IsKeyDown(Keys.Right))// && x < widthInTiles - 1 && tileSetup[grid[x + 1, y]].Movable)
                 {
-                    player.Move(new Vector2(1, 0));
+                    translation = new Vector2(1, 0);
+                }
+                Vector2 newPosition = translation + player.Position;
+                Chunk chunk = GetChunk(newPosition);
+                if (chunk != null && tileSetup[chunk.GetGridValue(newPosition)].Movable)
+                {
+                    player.Position = newPosition;
                 }
 
                 playerLight.Position = player.Position;
@@ -287,10 +293,13 @@ namespace XenosAdventure
 
             foreach (var tile in tiles)
             {
-                Chunk chunk = GetChunk(tile / tileSize);
-                TileType type = tileSetup[chunk.Grid[(int)tile.X / tileSize - chunk.ChunkPosition.X * chunkSize, (int)tile.Y / tileSize - chunk.ChunkPosition.Y * chunkSize]];
-                if (!type.Movable && !type.Unshaded)
-                    return true;
+                Chunk chunk = GetChunk(tile);
+                if (chunk != null)
+                {
+                    TileType type = tileSetup[chunk.Grid[(int)tile.X - chunk.ChunkPosition.X * chunkSize, (int)tile.Y - chunk.ChunkPosition.Y * chunkSize]];
+                    if (!type.Movable && !type.Unshaded)
+                        return true;
+                }
             }
 
             return false;
@@ -304,7 +313,7 @@ namespace XenosAdventure
             // Diffuse
             foreach (PointLight light in lightSources)
             {
-                if (!IsInShadow(light.Position * tileSize, position * tileSize))
+                if (!IsInShadow(light.Position, position))
                 {
                     shadedColor += color.ToVector3() * light.Color.ToVector3() * light.CalculatePower(position);
                 }
@@ -326,64 +335,109 @@ namespace XenosAdventure
 
         private Chunk GetChunk(Vector2 blockPosition)
         {
-            int x = (int)blockPosition.X / chunkSize;
-            if (player.Position.X < 0)
+            return chunks.Find(c => c.ChunkPosition.Equals(GetChunkPosition(blockPosition)));
+        }
+
+        private Point GetChunkPosition(Vector2 blockPosition)
+        {
+            int x, y;
+            if (blockPosition.X < 0)
+            {
+                x = ((int)blockPosition.X + 1) / chunkSize;
                 x -= 1;
-            int y = (int)blockPosition.Y / chunkSize;
-            if (player.Position.Y < 0)
+            }
+            else
+            {
+                x = (int)blockPosition.X / chunkSize;
+            }
+            if (blockPosition.Y < 0)
+            {
+                y = ((int)blockPosition.Y + 1) / chunkSize;
                 y -= 1;
-            return chunks.Find(c => c.ChunkPosition.Equals(new Point(x, y)));
+            }
+            else
+            {
+                y = (int)blockPosition.Y / chunkSize;
+            }
+            return new Point(x, y);
         }
 
         public override void Draw(GameTime gameTime)
         {
-            // Center of screen, offset everything from this
-            //Vector2 playerPos = new Vector2(width, height) / 2 - Vector2.One * tileSize / 2;
+            Vector2 startBlock = player.Position - new Vector2(widthInTiles, heightInTiles) / 2;
+            Vector2 endBlock = player.Position + new Vector2(widthInTiles, heightInTiles) / 2;
 
             // Find visible chunks
             List<Chunk> visibleChunks = new List<Chunk>();
-            int x = (int)player.Position.X / chunkSize;
-            if (player.Position.X < 0) 
-                x -= 1;
-            int y = (int)player.Position.Y / chunkSize;
-            if (player.Position.Y < 0)
-                y -= 1;
-            Console.WriteLine(player.Position.X + ", " + player.Position.Y);
-            visibleChunks.Add(chunks.Find(c => c.ChunkPosition.Equals(new Point(x, y))));
-            if (player.Position.X >= 0)
-                visibleChunks.Add(chunks.Find(c => c.ChunkPosition.Equals(new Point(x - 1, y))));
-            if (chunkSize - player.Position.X < widthInTiles)
-                visibleChunks.Add(chunks.Find(c => c.ChunkPosition.Equals(new Point(x + 1, y))));
+            Point startChunk = GetChunkPosition(startBlock);
+            Point endChunk = GetChunkPosition(endBlock);
+
+            for (int chunkX = startChunk.X; chunkX <= endChunk.X; chunkX++)
+            {
+                for (int chunkY = startChunk.Y; chunkY <= endChunk.Y; chunkY++)
+                {
+                    //Console.WriteLine(chunkX + ", " + chunkY);
+                    Chunk chunk = chunks.Find(c => c.ChunkPosition.Equals(new Point(chunkX, chunkY)));
+                    if (chunk != null)
+                    {
+                        visibleChunks.Add(chunk);
+                    }
+                }
+            }
 
             spriteBatch.Begin();
-
-            Vector2 startBlock = player.Position - new Vector2(widthInTiles, heightInTiles) / 2;
-            Vector2 endBlock = player.Position + new Vector2(widthInTiles, heightInTiles) / 2;
             foreach (var chunk in visibleChunks)
             {
+                //Console.WriteLine(chunk.ChunkPosition);
                 int[,] grid = chunk.Grid;
 
-                //int smallestI = Math.Max((int)chunk.ChunkPosition.X * chunkSize, (int)startBlock.X);
-                //smallestI -= (int)chunk.ChunkPosition.X * chunkSize;
+                #region FindMinMax
+                int xmin, ymin;
+                Vector2 A;
+                A.X = chunk.ChunkPosition.X * chunkSize;
+                A.Y = chunk.ChunkPosition.Y * chunkSize;
+                Vector2 B = startBlock;
+                if (A.X < B.X)
+                    xmin = (int)B.X - (int)A.X;
+                else
+                    xmin = 0;
 
-                //int largestI = Math.Max((int)chunk.ChunkPosition.X * chunkSize, (int)endBlock.X);
-                //largestI += (int)chunk.ChunkPosition.X * chunkSize;
+                if (A.Y < B.Y)
+                    ymin = (int)B.Y - (int)A.Y + 1;
+                else
+                    ymin = 0;
 
-                for (int i = 0; i < chunkSize; i++)
+                int xmax, ymax;
+                Vector2 C;
+                C.X = chunk.ChunkPosition.X * chunkSize + chunkSize - 1;
+                C.Y = chunk.ChunkPosition.Y * chunkSize + chunkSize - 1;
+                Vector2 D = endBlock;
+                if (C.X > D.X)
+                    xmax = (int)D.X - (int)A.X + 1;
+                else
+                    xmax = chunkSize;
+
+                if (C.Y > D.Y)
+                    ymax = (int)D.Y - (int)A.Y + 1;
+                else
+                    ymax = chunkSize;
+                #endregion
+
+                for (int x = xmin; x < xmax; x++)
                 {
-                    for (int j = 0; j < chunkSize; j++)
+                    for (int y = ymin; y < ymax; y++)
                     {
-                        Vector2 position = new Vector2(i * tileSize, j * tileSize) - player.Position * tileSize + halfScreen +
+                        Vector2 position = new Vector2(x * tileSize, y * tileSize) - player.Position * tileSize + halfScreen +
                             new Vector2(chunk.ChunkPosition.X, chunk.ChunkPosition.Y) * chunkSize * tileSize;
-                        if (tileSetup[grid[i, j]].Unshaded)
+                        if (tileSetup[grid[x, y]].Unshaded)
                         {
-                            spriteBatch.Draw(tile, position, tileSetup[grid[i, j]].Color);
+                            spriteBatch.Draw(tile, position, tileSetup[grid[x, y]].Color);
                         }
                         else
                         {
                             spriteBatch.Draw(tile, position, GetShadedColor(
-                                    new Vector2(i, j) + new Vector2(chunk.ChunkPosition.X, chunk.ChunkPosition.Y) * chunkSize, 
-                                    tileSetup[grid[i, j]].Color
+                                    new Vector2(x, y) + new Vector2(chunk.ChunkPosition.X, chunk.ChunkPosition.Y) * chunkSize,
+                                    tileSetup[grid[x, y]].Color
                             ));
                         }
                     }

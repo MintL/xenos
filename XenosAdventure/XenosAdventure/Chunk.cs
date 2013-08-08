@@ -10,14 +10,23 @@ namespace XenosAdventure
     {
         public int[,] Grid { get; protected set; }
         public Point ChunkPosition { get; set; }
+        private int chunkSize;
 
         public Chunk(Point position)
         {
             ChunkPosition = position;
         }
 
+        public int GetGridValue(Vector2 absolutePosition)
+        {
+            return Grid[(int)absolutePosition.X - ChunkPosition.X * chunkSize,
+                (int)absolutePosition.Y - ChunkPosition.Y * chunkSize];
+        }
+
         public void Generate(List<TileType> tileSetup, Random random, int chunkSize)
         {
+            this.chunkSize = chunkSize;
+
             // Calculate tiles based on weights
             int totalWeight = 0;
             foreach (TileType type in tileSetup)
