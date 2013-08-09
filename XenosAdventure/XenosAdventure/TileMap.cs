@@ -21,7 +21,7 @@ namespace XenosAdventure
         Random random = new Random();
 
         //int[,] grid;
-        List<Chunk> chunks = new List<Chunk>();
+        _2DLinkedListNode<Chunk> currentChunk;
 
         List<PointLight> lightSources = new List<PointLight>();
         Texture2D tile;
@@ -48,15 +48,16 @@ namespace XenosAdventure
 
             Chunk chunk = new Chunk(new Point(0, 0));
             chunk.Generate(tileSetup, random, chunkSize);
-            chunks.Add(chunk);
+            currentChunk = new _2DLinkedListNode<Chunk>(chunk);
 
             chunk = new Chunk(new Point(1, 0));
             chunk.Generate(tileSetup, random, chunkSize);
-            chunks.Add(chunk);
+            currentChunk.SetRight(new _2DLinkedListNode<Chunk>(chunk));
 
             chunk = new Chunk(new Point(-1, 0));
             chunk.Generate(tileSetup, random, chunkSize);
-            chunks.Add(chunk);
+            currentChunk.SetLeft(new _2DLinkedListNode<Chunk>(chunk));
+
         }
 
         protected override void LoadContent()
