@@ -46,6 +46,7 @@ namespace XenosAdventure
 
             Console.WriteLine("XENOS'S ADVENTURE");
 
+            
             Chunk chunk = new Chunk(new Point(0, 0));
             chunk.Generate(tileSetup, random, chunkSize);
             currentChunk = new _2DLinkedListNode<Chunk>(chunk);
