@@ -29,6 +29,8 @@ namespace XenosAdventure
         PointLight playerLight;
         TimeSpan playerMovementTime;
 
+        Monster monster;
+
         public TileMap(Game game, List<TileType> tileSetup, int tileSize)
             : base(game)
         {
@@ -64,10 +66,12 @@ namespace XenosAdventure
             tile = Game.Content.Load<Texture2D>("tile");
             lightSources.Add(new PointLight(new Vector2(16, 16), new Color(.9f, .9f, .9f), 50));
             
-            player = new Player();
+            player = new Player(tile);
             playerLight = new PointLight(player.Position, player.LightColor, 50);
             
             lightSources.Add(playerLight);
+
+            monster = new Monster(tile);
         }
 
         public override void Update(GameTime gameTime)
@@ -80,28 +84,58 @@ namespace XenosAdventure
                 KeyboardState keystate = Keyboard.GetState();
 
                 Vector2 translation = Vector2.Zero;
+                int newRotation = player.Rotation;
                 if (keystate.IsKeyDown(Keys.Up))// && y > 0 && tileSetup[grid[x, y - 1]].Movable)
                 {
                     translation = new Vector2(0, -1);
+                    newRotation = 3;
                 }
                 else if (keystate.IsKeyDown(Keys.Down))// && y < heightInTiles - 1 && tileSetup[grid[x, y + 1]].Movable)
                 {
                     translation = new Vector2(0, 1);
+                    newRotation = 1;
                 }
                 else if (keystate.IsKeyDown(Keys.Left))// && x > 0 && tileSetup[grid[x - 1, y]].Movable)
                 {
                     translation = new Vector2(-1, 0);
+                    newRotation = 2;
                 }
                 else if (keystate.IsKeyDown(Keys.Right))// && x < widthInTiles - 1 && tileSetup[grid[x + 1, y]].Movable)
                 {
                     translation = new Vector2(1, 0);
+                    newRotation = 0;
                 }
-                Vector2 newPosition = translation + player.Position;
-                Chunk chunk = GetChunk(newPosition);
-                if (chunk != null && tileSetup[chunk.GetGridValue(newPosition)].Movable)
+
+                if (translation != Vector2.Zero)
                 {
-                    player.Position = newPosition;
+                    Vector2 newPosition = translation + player.Position;
+
+                    List<Vector2> blocks = monster.GetOccupiedBlocks(newPosition, newRotation);
+                    bool blocksMovable = true;
+                    foreach (Vector2 block in blocks)
+                    {
+                        // TODO: Improve by reusing the previous chunk
+                        Chunk chunk = GetChunk(block);
+                        if (chunk != null && tileSetup[chunk.GetGridValue(block)].Movable)
+                        {
+
+                        }
+                        else
+                        {
+                            blocksMovable = false;
+                        }
+                    }
+
+                    if (blocksMovable)
+                    {
+                        player.Position = newPosition;
+                        player.Rotation = newRotation;
+
+                        monster.Position = newPosition;
+                        monster.Rotation = newRotation;
+                    }
                 }
+                
 
                 playerLight.Position = player.Position;
             }
@@ -350,7 +384,8 @@ namespace XenosAdventure
             }
 
             // Player
-            spriteBatch.Draw(tile, halfScreen, player.Color);
+            monster.Draw(spriteBatch, halfScreen, player.Position, tileSize);
+            //player.Draw(spriteBatch, halfScreen, player.Position, tileSize);
 
             spriteBatch.End();
         }
