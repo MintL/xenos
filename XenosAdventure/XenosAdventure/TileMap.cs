@@ -10,12 +10,15 @@ namespace XenosAdventure
 {
     class TileMap : DrawableGameComponent
     {
-        int width, height;
+        int screenWidth, screenHeight;
         Vector2 halfScreen;
         int widthInTiles, heightInTiles;
         int tileSize;
         int chunkSize = 32;
+        
         SpriteBatch spriteBatch;
+        RenderTarget2D screenTexture;
+        Effect mapEffect;
 
         List<TileType> tileSetup;
         Random random = new Random();
@@ -32,12 +35,12 @@ namespace XenosAdventure
         public TileMap(Game game, List<TileType> tileSetup, int tileSize)
             : base(game)
         {
-            width = Game.GraphicsDevice.Viewport.Width;
-            height = Game.GraphicsDevice.Viewport.Height;
-            halfScreen = new Vector2(width, height) / 2 - Vector2.One * tileSize / 2;
+            screenWidth = Game.GraphicsDevice.Viewport.Width;
+            screenHeight = Game.GraphicsDevice.Viewport.Height;
+            halfScreen = new Vector2(screenWidth, screenHeight) / 2 - Vector2.One * tileSize / 2;
 
-            widthInTiles = width / tileSize + 1;
-            heightInTiles = height / tileSize + 1;
+            widthInTiles = screenWidth / tileSize + 1;
+            heightInTiles = screenHeight / tileSize + 1;
 
             this.tileSetup = tileSetup;
             this.tileSize = tileSize;
@@ -68,6 +71,9 @@ namespace XenosAdventure
             playerLight = new PointLight(player.Position, player.LightColor, 50);
             
             lightSources.Add(playerLight);
+
+            screenTexture = new RenderTarget2D(Game.GraphicsDevice, screenWidth, screenHeight);
+            mapEffect = Game.Content.Load<Effect>(@"Effects\MapEffect");
         }
 
         public override void Update(GameTime gameTime)
@@ -290,6 +296,8 @@ namespace XenosAdventure
                 }
             }
 
+            GraphicsDevice.SetRenderTarget(screenTexture);
+
             spriteBatch.Begin();
             foreach (var chunk in visibleChunks)
             {
@@ -352,6 +360,13 @@ namespace XenosAdventure
             // Player
             spriteBatch.Draw(tile, halfScreen, player.Color);
 
+            spriteBatch.End();
+
+            GraphicsDevice.SetRenderTarget(null);
+
+            spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend);
+            mapEffect.CurrentTechnique.Passes[0].Apply();
+            spriteBatch.Draw(screenTexture, Vector2.Zero, Color.Red);
             spriteBatch.End();
         }
     }
