@@ -18,6 +18,7 @@ namespace XenosAdventure
         
         SpriteBatch spriteBatch;
         RenderTarget2D screenTexture;
+        RenderTarget2D pixelTexture;
         Effect mapEffect;
 
         List<TileType> tileSetup;
@@ -73,6 +74,7 @@ namespace XenosAdventure
             lightSources.Add(playerLight);
 
             screenTexture = new RenderTarget2D(Game.GraphicsDevice, screenWidth, screenHeight);
+            pixelTexture = new RenderTarget2D(Game.GraphicsDevice, widthInTiles, heightInTiles);
             mapEffect = Game.Content.Load<Effect>(@"Effects\MapEffect");
         }
 
@@ -362,11 +364,17 @@ namespace XenosAdventure
 
             spriteBatch.End();
 
+            GraphicsDevice.SetRenderTarget(pixelTexture);
+
+            spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, DepthStencilState.Default, RasterizerState.CullCounterClockwise);
+            mapEffect.CurrentTechnique.Passes[0].Apply();
+            spriteBatch.Draw(screenTexture, new Rectangle(0, 0, widthInTiles, heightInTiles), Color.White);
+            spriteBatch.End();
+
             GraphicsDevice.SetRenderTarget(null);
 
-            spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend);
-            mapEffect.CurrentTechnique.Passes[0].Apply();
-            spriteBatch.Draw(screenTexture, Vector2.Zero, Color.Red);
+            spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, DepthStencilState.Default, RasterizerState.CullCounterClockwise);
+            spriteBatch.Draw(pixelTexture, new Rectangle(0, 0, screenWidth, screenHeight), Color.White);
             spriteBatch.End();
         }
     }
