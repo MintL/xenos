@@ -207,7 +207,7 @@ namespace XenosAdventure
                 if (chunk != null)
                 {
                     TileType type = tileSetup[chunk.Grid[(int)tile.X - chunk.ChunkPosition.X * chunkSize, (int)tile.Y - chunk.ChunkPosition.Y * chunkSize]];
-                    if (!type.Movable && !type.Unshaded)
+                    if (!type.Movable && type.Wall)
                         return true;
                 }
             }
@@ -230,18 +230,18 @@ namespace XenosAdventure
             }
 
             // Bloom
-            Chunk chunk = GetChunk(position);
-            int x = (int)position.X - chunk.ChunkPosition.X * chunkSize;
-            int y = (int)position.Y - chunk.ChunkPosition.Y * chunkSize;
+            //Chunk chunk = GetChunk(position);
+            //int x = (int)position.X - chunk.ChunkPosition.X * chunkSize;
+            //int y = (int)position.Y - chunk.ChunkPosition.Y * chunkSize;
 
-            if (x > 0 && tileSetup[chunk.Grid[x - 1, y]].Unshaded)
-                shadedColor += tileSetup[chunk.Grid[x - 1, y]].Color.ToVector3() * 0.4f;
-            if (x < chunkSize - 1 && tileSetup[chunk.Grid[x + 1, y]].Unshaded)
-                shadedColor += tileSetup[chunk.Grid[x + 1, y]].Color.ToVector3() * 0.4f;
-            if (y > 0 && tileSetup[chunk.Grid[x, y - 1]].Unshaded)
-                shadedColor += tileSetup[chunk.Grid[x, y - 1]].Color.ToVector3() * 0.4f;
-            if (y < chunkSize - 1 && tileSetup[chunk.Grid[x, y + 1]].Unshaded)
-                shadedColor += tileSetup[chunk.Grid[x, y + 1]].Color.ToVector3() * 0.4f;
+            //if (x > 0 && tileSetup[chunk.Grid[x - 1, y]].Unshaded)
+            //    shadedColor += tileSetup[chunk.Grid[x - 1, y]].Color.ToVector3() * 0.4f;
+            //if (x < chunkSize - 1 && tileSetup[chunk.Grid[x + 1, y]].Unshaded)
+            //    shadedColor += tileSetup[chunk.Grid[x + 1, y]].Color.ToVector3() * 0.4f;
+            //if (y > 0 && tileSetup[chunk.Grid[x, y - 1]].Unshaded)
+            //    shadedColor += tileSetup[chunk.Grid[x, y - 1]].Color.ToVector3() * 0.4f;
+            //if (y < chunkSize - 1 && tileSetup[chunk.Grid[x, y + 1]].Unshaded)
+            //    shadedColor += tileSetup[chunk.Grid[x, y + 1]].Color.ToVector3() * 0.4f;
 
             return new Color(shadedColor.X, shadedColor.Y, shadedColor.Z);
         }
@@ -299,6 +299,7 @@ namespace XenosAdventure
             }
 
             GraphicsDevice.SetRenderTarget(screenTexture);
+            GraphicsDevice.Clear(Color.Black);
 
             spriteBatch.Begin();
             foreach (var chunk in visibleChunks)
@@ -365,13 +366,17 @@ namespace XenosAdventure
             spriteBatch.End();
 
             GraphicsDevice.SetRenderTarget(pixelTexture);
+            GraphicsDevice.Clear(Color.Black);
 
             spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, DepthStencilState.Default, RasterizerState.CullCounterClockwise);
             mapEffect.CurrentTechnique.Passes[0].Apply();
+            mapEffect.Parameters["textureSize"].SetValue(new Vector2(widthInTiles, heightInTiles));
+
             spriteBatch.Draw(screenTexture, new Rectangle(0, 0, widthInTiles, heightInTiles), Color.White);
             spriteBatch.End();
 
             GraphicsDevice.SetRenderTarget(null);
+            GraphicsDevice.Clear(Color.Black);
 
             spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, DepthStencilState.Default, RasterizerState.CullCounterClockwise);
             spriteBatch.Draw(pixelTexture, new Rectangle(0, 0, screenWidth, screenHeight), Color.White);
@@ -387,6 +392,7 @@ namespace XenosAdventure
         public bool Flood { get; set; }
         public bool Movable { get; set; }
         public bool Unshaded { get; set; }
+        public bool Wall { get; set; }
 
         public TileType(Color color, int weight, int repeatWeight)
         {
@@ -396,6 +402,7 @@ namespace XenosAdventure
             Flood = false;
             Movable = false;
             Unshaded = false;
+            Wall = true;
         }
     }
 

@@ -58,14 +58,22 @@ namespace XenosAdventure
             tileSetup.Add(type);
             
             // Walls
-            tileSetup.Add(new TileType(new Color(101, 0, 11), 7, 40));
+            //TileType walls = new TileType(new Color(101, 0, 11), 7, 40);
+            TileType walls = new TileType(new Color(255, 255, 0), 7, 40);
+            walls.Unshaded = true;
+            tileSetup.Add(walls);
+
+            //walls = new TileType(new Color(150, 0, 24), 1, 30);
+            walls = new TileType(new Color(255, 255, 0), 1, 30);
+            walls.Unshaded = true;
+            tileSetup.Add(walls);
 
             // Lava
             type = new TileType(new Color(230, 32, 32), 3, 30);
             type.Unshaded = true;
             type.Flood = true;
             tileSetup.Add(type);
-            tileSetup.Add(new TileType(new Color(150, 0, 24), 1, 30));
+
             
 
             adventureMap = new TileMap(this, tileSetup, tileSize);
